@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Anamaría Espinoza — CV Gamificado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* ===== Barra de progreso de rol ===== */
+    #role-progress-container {
+      position: fixed; top:16px; left:24px; right:24px; height:24px;
+      display:flex; align-items:center; z-index:200;
+    }
+    #role-progress-bar {
+      flex:1; height:8px; background:#e0e7ef; border-radius:4px; overflow:hidden;
+    }
+    #role-progress-fill {
+      height:100%; background:#71D1B3; width:0; transition:width .4s;
+    }
+    #role-progress-star {
+      margin-left:8px; font-size:1.2rem; opacity:0; transition:opacity .4s;
+    }
+
+    /* ===== Base ===== */
+    body {
+      margin:0; font-family:'Poppins',Arial,sans-serif;
+      background:#f6f8fa; color:#333; overflow-x:hidden;
+    }
+    h1,h2 { text-align:center; margin-bottom:1rem; }
+    .btn {
+      display:inline-block; background:#049DFF; color:#fff; border:none;
+      border-radius:30px; padding:12px 24px; font-weight:600; font-size:1rem;
+      cursor:pointer; transition:background .2s; text-decoration:none;
+    }
+    .btn:hover { background:#036dbd; }
+    .btn-secondary {
+      background:#e0e7ef; color:#333; margin-top:8px;
+    }
+    .btn-secondary:hover { background:#ccc; }
+    .card {
+      background:#fff; border-radius:16px;
+      box-shadow:0 2px 10px rgba(0,0,0,.06);
+      padding:28px 24px; max-width:600px; width:100%;
+      margin:0 auto 2.5rem;
+    }
+    .nav-dots {
+      position:fixed; right:24px; top:50%;
+      transform:translateY(-50%); z-index:100;
+    }
+    .nav-dot {
+      width:14px; height:14px; border-radius:50%;
+      background:#e0e7ef; margin:12px 0; cursor:pointer;
+      transition:background .2s;
+    }
+    .nav-dot.active { background:#F0BC00; }
+    .achievement {
+      position:fixed; left:50%; bottom:-60px;
+      transform:translateX(-50%);
+      background:#049DFF; color:#fff;
+      padding:12px 30px; border-radius:24px;
+      opacity:0; transition:bottom .4s,opacity .4s;
+    }
+    .achievement.show { bottom:30px; opacity:1; }
+
+    /* ===== Sections ===== */
+    .section {
+      display:none; flex-direction:column; align-items:center;
+      padding:80px 10px 40px; /* espacio para barra */
+      min-height:100vh;
+    }
+    .section.active { display:flex; }
+
+    /* ===== Explorer Roles ===== */
+    .explorer-grid {
+      display:flex; gap:16px; justify-content:center;
+      flex-wrap:wrap; margin:20px 0;
+    }
+    .explorer-class {
+      flex:1; min-width:120px; background:#e0e7ef; border-radius:12px;
+      padding:16px; text-align:center; cursor:pointer;
+      transition:transform .2s, background .2s;
+    }
+    .explorer-class.selected {
+      background:#049DFF; color:#fff; transform:scale(1.05);
+    }
+    .explorer-class span {
+      display:block; font-size:2rem; margin-bottom:8px;
+    }
+
+    /* ===== Conectar puntos ===== */
+    .click-point {
+      width:60px; height:60px; background:rgba(255,255,255,0.3);
+      border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:2.6rem;
+      position:absolute; cursor:pointer;
+      transition:transform .2s,box-shadow .2s; z-index:2;
+    }
+    @keyframes pulseClick {
+      0% {transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,0);}
+      50% {transform:scale(1.2);box-shadow:0 0 12px 6px rgba(255,255,255,0.8);}
+      100% {transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,0);}
+    }
+    .pulse-once {
+      animation:pulseClick 1.5s infinite;
+    }
+    #mission-points { position:relative; margin:24px auto; width:320px; height:170px; max-width:96vw; }
+
+    /* ===== Trayectoria ===== */
+    .progress-container {
+      width:100%; height:10px; background:#E679A6;
+      border-radius:5px; margin:18px 0; position:relative;
+    }
+    .progress-fill {
+      height:100%; background:#049DFF;
+      border-radius:5px; width:0; transition:width .5s;
+    }
+    .progress-marker {
+      position:absolute; width:24px; height:24px;
+      background:#fff; border:3px solid #E679A6;
+      border-radius:50%; top:-8px; transform:translateX(-50%);
+      cursor:pointer; transition:border .2s, transform .2s, box-shadow .2s;
+    }
+    .progress-marker.active { border-color:#049DFF; }
+
+    /* ===== Flip-cards ===== */
+    .flipping-grid {
+      display:flex; flex-wrap:wrap; gap:16px;
+      justify-content:center; margin:20px 0;
+    }
+    .flip-card {
+      width:160px; height:120px; perspective:800px;
+      cursor:pointer;
+    }
+    .flip-card-inner {
+      position:relative; width:100%; height:100%;
+      transition:transform .7s; transform-style:preserve-3d;
+    }
+    .flip-card.flipped .flip-card-inner {
+      transform:rotateY(180deg);
+    }
+    .flip-card-front, .flip-card-back {
+      position:absolute; width:100%; height:100%;
+      backface-visibility:hidden; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,.1); padding:12px; text-align:center;
+    }
+    .flip-card-front { background:#F0BC00; color:#fff; }
+    .flip-card-back {
+      background:#71D1B3; color:#fff;
+      transform:rotateY(180deg); font-size:.9rem;
+    }
+    .highlight {
+      box-shadow:0 0 0 4px #049DFF; transform:scale(1.05);
+    }
+
+    @media(max-width:600px){
+      .flip-card { width:90vw; height:110px; }
+      .explorer-grid,.flipping-grid { flex-direction:column; }
+      .card { padding:18px 6px; }
+      .btn { min-width:110px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra fija de progreso de rol -->
+  <div id="role-progress-container">
+    <div id="role-progress-bar"><div id="role-progress-fill"></div></div>
+    <span id="role-progress-star">🌟</span>
+  </div>
+
+  <div class="nav-dots">
+    <div class="nav-dot active" data-section="welcome"></div>
+    <div class="nav-dot" data-section="mission"></div>
+    <div class="nav-dot" data-section="journey"></div>
+    <div class="nav-dot" data-section="skills"></div>
+    <div class="nav-dot" data-section="projects"></div>
+    <div class="nav-dot" data-section="contact"></div>
+  </div>
+  <div class="achievement"><span class="achievement-text"></span></div>
+
+  <!-- SECCIÓN 1: Bienvenida -->
+  <section id="welcome" class="section active" style="background:linear-gradient(135deg,#F0BC00,#71D1B3);">
+    <div class="card">
+      <h1>Bienvenida, explorador(a), gracias por interesarte en conocer un poco más de mi trabajo</h1>
+      <p>Elige tu rol para ponerte en mis zapatos y comenzar tu viaje:</p>
+      <div class="explorer-grid">
+        <div class="explorer-class" data-class="Humanista Digital">
+          <span>🧑‍🎓</span><strong>Humanista Digital</strong>
+        </div>
+        <div class="explorer-class" data-class="Diseñadora Gráfica">
+          <span>🎨</span><strong>Diseñadora Gráfica</strong>
+        </div>
+        <div class="explorer-class" data-class="Instruccional">
+          <span>💡</span><strong>Desarrolladora Instruccional</strong>
+        </div>
+      </div>
+      <button id="start-btn" class="btn" disabled>Elige tu rol</button>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 2: Misión Educativa -->
+  <section id="mission" class="section" style="background:linear-gradient(135deg,#049DFF,#F0BC00);">
+    <div class="card">
+      <h2 id="mission-title">Mi misión educativa</h2>
+      <div id="mission-points">
+        <div id="mp-1" class="click-point pulse-once" onclick="showMission(0)" title="Haz clic">🎯</div>
+        <div id="mp-2" class="click-point pulse-once" onclick="showMission(1)" title="Haz clic" style="top:110px; left:34px;">💡</div>
+        <div id="mp-3" class="click-point pulse-once" onclick="showMission(2)" title="Haz clic" style="top:110px; left:228px;">📚</div>
+        <svg width="320" height="170" style="position:absolute;top:0;left:0;pointer-events:none;">
+          <line id="mline-01-02" x1="159" y1="27" x2="53" y2="129" stroke="#E679A6" stroke-width="4" opacity="0"/>
+          <line id="mline-01-03" x1="159" y1="27" x2="247" y2="129" stroke="#71D1B3" stroke-width="4" opacity="0"/>
+          <line id="mline-02-03" x1="53" y1="129" x2="247" y2="129" stroke="#F0BC00" stroke-width="4" opacity="0"/>
+        </svg>
+        <div id="mission-content" style="display:none; position:absolute; top:60px; left:0; right:0; margin:auto; background:rgba(255,255,255,0.95); padding:12px; border-radius:8px; text-align:left; max-width:280px;"></div>
+      </div>
+      <button class="btn" onclick="navigateToSection('journey')">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 3: Trayectoria Profesional -->
+  <section id="journey" class="section" style="background:linear-gradient(120deg,#E679A6,#71D1B3);">
+    <div class="card">
+      <h2>Mi trayectoria</h2>
+      <div class="progress-container">
+        <div id="journey-fill" class="progress-fill"></div>
+        <div class="progress-marker pulse-once active" data-level="1" style="left:0%"></div>
+        <div class="progress-marker pulse-once" data-level="2" style="left:25%"></div>
+        <div class="progress-marker pulse-once" data-level="3" style="left:50%"></div>
+        <div class="progress-marker pulse-once" data-level="4" style="left:75%"></div>
+        <div class="progress-marker pulse-once" data-level="5" style="left:100%"></div>
+      </div>
+      <div id="journey-steps">
+        <div id="js-1" class="level-content active" style="display:block;"></div>
+        <div id="js-2" class="level-content" style="display:none;"></div>
+        <div id="js-3" class="level-content" style="display:none;"></div>
+        <div id="js-4" class="level-content" style="display:none;"></div>
+        <div id="js-5" class="level-content" style="display:none;"></div>
+      </div>
+      <button class="btn" onclick="navigateToSection('skills')">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 4: Habilidades -->
+  <section id="skills" class="section" style="background:linear-gradient(140deg,#71D1B3,#E679A6);">
+    <div class="card">
+      <h2>Habilidades &amp; Herramientas</h2>
+      <div id="skills-grid" class="flipping-grid"></div>
+      <button class="btn" onclick="navigateToSection('projects')">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 5: Proyectos -->
+  <section id="projects" class="section" style="background:linear-gradient(120deg,#F0BC00,#71D1B3);">
+    <div class="card">
+      <h2>Proyectos destacados</h2>
+      <div id="projects-grid" class="flipping-grid"></div>
+      <button class="btn" onclick="navigateToSection('contact')">Finalizar</button>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 6: Contacto -->
+  <section id="contact" class="section" style="background:linear-gradient(140deg,#71D1B3,#F0BC00);">
+    <div class="card">
+      <h2>¡Has completado tu camino!</h2>
+      <p>Escríbeme y conversemos sobre tu rol.</p>
+      <p><strong>Mi LinkedIn:</strong>
+        <a href="https://www.linkedin.com/in/anamariaespinoza" target="_blank">
+          linkedin.com/in/anamariaespinoza
+        </a>
+      </p>
+      <button class="btn btn-secondary" onclick="resetAdventure()">
+        🔄 Prueba otro rol
+      </button>
+    </div>
+  </section>
+
+  <script>
+    let selectedRole = null;
+
+    const rolePaths = {
+      'Humanista Digital': {
+        missionPoints: [
+          ['Fusionar tecnología y humanidades','#71D1B3'],
+          ['Crear narrativas digitales','#E679A6'],
+          ['Conectar comunidades','#F0BC00']
+        ],
+        missionContent: [
+          'Uso R y SIG para mapear discursos culturales.',
+          'Genero podcasts académicos de reflexión.',
+          'Diseño storymaps que relatan contextos sociales.'
+        ],
+        journey: [
+          'Comunicación Social UCA (2002–2008)',
+          'Máster en Humanidades Digitales (2018)',
+          'Ponencias virtuales (2021)',
+          'Investigación con R & SIG',
+          'Coordinación de WikiLearn'
+        ],
+        skills: [
+          ['📊','Análisis de datos en R'],
+          ['🗺️','Storymaps & SIG'],
+          ['🎙️','Podcasting académico'],
+          ['✒️','Content strategy']
+        ],
+        projects: [
+          ['🗺️','Storymap Elecciones 2021'],
+          ['🔍','Minería de datos de odio'],
+          ['🎙️','Podcast “Humanismo Digital”']
+        ]
+      },
+      'Diseñadora Gráfica': {
+        missionPoints: [
+          ['Convertir info en arte','#F0BC00'],
+          ['Branding efectivo','#E679A3'],
+          ['UX visual','#71D1B3']
+        ],
+        missionContent: [
+          'Creo identidades visuales memorables.',
+          'Desarrollo guías de estilo claras.',
+          'Diseño interfaces centradas en el usuario.'
+        ],
+        journey: [
+          'Máster Diseño Gráfico (2010)',
+          'Instructora Adobe CC',
+          'Identidad LabMultimedia',
+          'Infografías interactivas',
+          'Webs educativas'
+        ],
+        skills: [
+          ['🖌️','Photoshop & Illustrator'],
+          ['📐','Tipografía & Layout'],
+          ['🎨','Color Theory'],
+          ['🎬','After Effects']
+        ],
+        projects: [
+          ['🌐','Web EducaComunicación'],
+          ['📊','Infografías GESCOM'],
+          ['🎥','Material multimedia']
+        ]
+      },
+      'Instruccional': {
+        missionPoints: [
+          ['Diseñar e-learning','#049DFF'],
+          ['Gamificar cursos','#F0BC00'],
+          ['Evaluar formativamente','#E679A6']
+        ],
+        missionContent: [
+          'Customizo LMS (Moodle, Sakai).',
+          'Integro badges y feedback en H5P.',
+          'Creo rúbricas en R para evaluación.'
+        ],
+        journey: [
+          'Coordinadora TIC (2016–2018)',
+          'Diplomados online (2019)',
+          'Aulas virtuales COVID',
+          'Gamificación HD (2021)',
+          'WikiLearn gamificado'
+        ],
+        skills: [
+          ['📚','Moodle & Canvas'],
+          ['🎮','H5P & Gamificación'],
+          ['✍️','Diseño instruccional'],
+          ['🔍','Evaluación formativa']
+        ],
+        projects: [
+          ['💻','Aulas virtuales UCA'],
+          ['🏅','Diplomado Multimedia'],
+          ['🌐','WikiLearn gamificado']
+        ]
+      }
+    };
+
+    const sections = ['welcome','mission','journey','skills','projects','contact'];
+    const dots = document.querySelectorAll('.nav-dot');
+    const els = {};
+    sections.forEach(id => els[id] = document.getElementById(id));
+
+    function navigateToSection(id) {
+      sections.forEach(s => els[s].classList.remove('active'));
+      els[id].classList.add('active');
+      dots.forEach(d => d.classList.toggle('active', d.dataset.section === id));
+      updateRoleProgress(id);
+      document.querySelectorAll('.click-point')
+        .forEach(el => el.classList.toggle('pulse-once', id === 'mission'));
+      document.querySelectorAll('.progress-marker')
+        .forEach(el => el.classList.toggle('pulse-once', id === 'journey'));
+    }
+    dots.forEach((d, i) => d.onclick = () => navigateToSection(sections[i]));
+
+    document.querySelectorAll('.explorer-class').forEach(el => {
+      el.onclick = () => {
+        document.querySelectorAll('.explorer-class')
+          .forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedRole = el.dataset.class;
+        const btn = document.getElementById('start-btn');
+        btn.disabled = false;
+        btn.textContent = `Comenzar como ${selectedRole}`;
+      };
+    });
+
+    document.getElementById('start-btn').onclick = () => {
+      loadMission();
+      loadJourney();
+      loadSkills();
+      loadProjects();
+      navigateToSection('mission');
+    };
+
+    function loadMission() {
+      const cfg = rolePaths[selectedRole];
+      cfg.missionPoints.forEach((pt, i) => {
+        const el = document.getElementById(`mp-${i+1}`);
+        el.style.backgroundColor = pt[1];
+      });
+      window.showMission = idx => {
+        const content = document.getElementById('mission-content');
+        content.textContent = cfg.missionContent[idx];
+        content.style.display = 'block';
+        if (idx >= 1) document.getElementById('mline-01-02').setAttribute('opacity', '1');
+        if (idx >= 2) document.getElementById('mline-01-03').setAttribute('opacity', '1');
+        if (idx === 2) document.getElementById('mline-02-03').setAttribute('opacity', '1');
+      };
+    }
+
+    function loadJourney() {
+      rolePaths[selectedRole].journey.forEach((txt, i) => {
+        document.getElementById(`js-${i+1}`).textContent = txt;
+      });
+    }
+
+    function loadSkills() {
+      const grid = document.getElementById('skills-grid');
+      grid.innerHTML = '';
+      rolePaths[selectedRole].skills.forEach(([icon, txt]) => {
+        const card = document.createElement('div');
+        card.className = 'flip-card';
+        card.innerHTML = `
+          <div class="flip-card-inner">
+            <div class="flip-card-front">${icon}<div>${txt}</div></div>
+            <div class="flip-card-back">${txt}</div>
+          </div>`;
+        grid.appendChild(card);
+      });
+      document.querySelectorAll('.flip-card').forEach(c => {
+        c.onclick = () => c.classList.toggle('flipped');
+      });
+    }
+
+    function loadProjects() {
+      const grid = document.getElementById('projects-grid');
+      grid.innerHTML = '';
+      rolePaths[selectedRole].projects.forEach(([icon, txt]) => {
+        const card = document.createElement('div');
+        card.className = 'flip-card';
+        card.innerHTML = `
+          <div class="flip-card-inner">
+            <div class="flip-card-front">${icon}<div>${txt}</div></div>
+            <div class="flip-card-back">${txt}</div>
+          </div>`;
+        grid.appendChild(card);
+      });
+      document.querySelectorAll('.flip-card').forEach(c => {
+        c.onclick = () => c.classList.toggle('flipped');
+      });
+    }
+
+    document.querySelectorAll('.progress-marker').forEach(m => {
+      m.onclick = function() {
+        document.querySelectorAll('.progress-marker')
+          .forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+        const lvl = this.dataset.level;
+        document.querySelectorAll('.level-content')
+          .forEach(c => c.style.display = 'none');
+        document.getElementById(`js-${lvl}`).style.display = 'block';
+        document.getElementById('journey-fill')
+          .style.width = this.style.left;
+      };
+    });
+
+    function updateRoleProgress(id) {
+      const idx = sections.indexOf(id);
+      const pct = ((idx + 1) / sections.length) * 100;
+      document.getElementById('role-progress-fill').style.width = pct + '%';
+      document.getElementById('role-progress-star').style.opacity = (idx === sections.length - 1 ? 1 : 0);
+    }
+
+    function resetAdventure() {
+      selectedRole = null;
+      document.getElementById('role-progress-fill').style.width = '0';
+      document.getElementById('role-progress-star').style.opacity = '0';
+      document.querySelectorAll('.explorer-class')
+        .forEach(c => c.classList.remove('selected'));
+      const btn = document.getElementById('start-btn');
+      btn.disabled = true; btn.textContent = 'Elige tu rol';
+      document.getElementById('mission-content').style.display = 'none';
+      ['mline-01-02','mline-01-03','mline-02-03']
+        .forEach(id => document.getElementById(id).setAttribute('opacity','0'));
+      document.querySelectorAll('.progress-marker')
+        .forEach(m => m.classList.remove('active','pulse-once'));
+      document.querySelectorAll('.level-content')
+        .forEach(c => c.style.display = 'none');
+      document.getElementById('js-1').style.display = 'block';
+      document.getElementById('journey-fill').style.width = '0';
+      navigateToSection('welcome');
+    }
+
+    // Inicialización
+    navigateToSection('welcome');
+  </script>
+</body>
+</html>
